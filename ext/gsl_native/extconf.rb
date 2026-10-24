@@ -1,9 +1,14 @@
 require 'mkmf'
 
+# --with-gsl-config=PATH picks the gsl-config to ask. Without it, use the copy
+# velopro/heroku-gsl-buildpack vendors on Heroku, then whatever is on PATH.
+GSL_CONFIG = arg_config('--with-gsl-config') ||
+  (File.exist?('/app/vendor/gsl/bin/gsl-config') ? '/app/vendor/gsl/bin/gsl-config' : 'gsl-config')
+
 def gsl_config_arg(arg)
   yield arg_config("--with-gsl-#{arg}") {
     sh = 'sh ' if RUBY_PLATFORM =~ /mingw/
-    IO.popen("#{sh}gsl-config --#{arg}") { |f| f.gets.chomp }
+    IO.popen("#{sh}#{GSL_CONFIG} --#{arg}") { |f| f.gets.chomp }
   }, lambda { |val| puts "checking gsl #{arg}... #{val}"; val }
 rescue => err
   abort "*** ERROR: missing required library to compile this module: #{err}"
@@ -84,6 +89,15 @@ def gsl_gem_config(target, dir = 'ext')
 end
 
 $CFLAGS += ' -Wall -Iinclude'
+
+# Clang 16+ and GCC 14+ turn these type mismatches into errors; the C sources
+# predate that. append_cflags skips any flag the compiler doesn't know.
+append_cflags(%w[
+  -Wno-error=incompatible-function-pointer-types
+  -Wno-error=incompatible-pointer-types
+  -Wno-error=int-conversion
+  -Wno-error=implicit-function-declaration
+])
 
 gsl_config_arg(:version) { |version, check|
   gsl_def(:GSL_VERSION, check[version])
