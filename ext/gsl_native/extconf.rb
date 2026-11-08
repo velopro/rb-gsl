@@ -2,13 +2,16 @@ require 'mkmf'
 
 # --with-gsl-config=PATH picks the gsl-config to ask. Without it, use the copy
 # velopro/heroku-gsl-buildpack vendors on Heroku, then whatever is on PATH.
-GSL_CONFIG = arg_config('--with-gsl-config') ||
+gsl_config = arg_config('--with-gsl-config')
+abort '*** ERROR: --with-gsl-config needs a path, e.g. --with-gsl-config=/usr/local/bin/gsl-config' if gsl_config == true
+GSL_CONFIG = gsl_config ||
   (File.exist?('/app/vendor/gsl/bin/gsl-config') ? '/app/vendor/gsl/bin/gsl-config' : 'gsl-config')
 
 def gsl_config_arg(arg)
   yield arg_config("--with-gsl-#{arg}") {
-    sh = 'sh ' if RUBY_PLATFORM =~ /mingw/
-    IO.popen("#{sh}#{GSL_CONFIG} --#{arg}") { |f| f.gets.chomp }
+    command = [GSL_CONFIG, "--#{arg}"]
+    command.unshift('sh') if RUBY_PLATFORM =~ /mingw/
+    IO.popen(command) { |f| f.gets.chomp }
   }, lambda { |val| puts "checking gsl #{arg}... #{val}"; val }
 rescue => err
   abort "*** ERROR: missing required library to compile this module: #{err}"
@@ -91,13 +94,16 @@ end
 $CFLAGS += ' -Wall -Iinclude'
 
 # Clang 16+ and GCC 14+ turn these type mismatches into errors; the C sources
-# predate that. append_cflags skips any flag the compiler doesn't know.
-append_cflags(%w[
-  -Wno-error=incompatible-function-pointer-types
-  -Wno-error=incompatible-pointer-types
-  -Wno-error=int-conversion
-  -Wno-error=implicit-function-declaration
-])
+# predate that. append_cflags (mkmf in Ruby 2.7+) skips any flag the compiler
+# doesn't know; older Rubies predate those compilers too.
+if respond_to?(:append_cflags, true)
+  append_cflags(%w[
+    -Wno-error=incompatible-function-pointer-types
+    -Wno-error=incompatible-pointer-types
+    -Wno-error=int-conversion
+    -Wno-error=implicit-function-declaration
+  ])
+end
 
 gsl_config_arg(:version) { |version, check|
   gsl_def(:GSL_VERSION, check[version])
@@ -121,7 +127,7 @@ gsl_config_arg(:version) { |version, check|
 
   raise 'Ruby/GSL requires gsl-1.15 or later.' unless later['1.15']
 
-  %w[1.15 1.16 2.0 2.1].each { |v| later[v] }
+  %w[1.15 1.16 2.0 2.1 2.8].each { |v| later[v] }
 }
 
 gsl_config_arg(:cflags) { |cflags, check|
