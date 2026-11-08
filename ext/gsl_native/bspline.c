@@ -3,6 +3,14 @@
 
 static VALUE cBSWS;
 
+/* GSL 2.8 marks gsl_bspline_ncoeffs for deprecation in favor of
+   gsl_bspline_ncontrol, which returns the same nbreak + k - 2. */
+#ifdef GSL_2_8_LATER
+#define RB_GSL_BSPLINE_NCOEFFS(w) gsl_bspline_ncontrol(w)
+#else
+#define RB_GSL_BSPLINE_NCOEFFS(w) gsl_bspline_ncoeffs(w)
+#endif
+
 static VALUE rb_gsl_bspline_alloc(VALUE klass, VALUE k, VALUE n)
 {
   gsl_bspline_workspace *w;
@@ -14,7 +22,7 @@ static VALUE rb_gsl_bspline_ncoeffs(VALUE obj)
 {
   gsl_bspline_workspace *w;
   Data_Get_Struct(obj, gsl_bspline_workspace, w);
-  return INT2FIX((int)gsl_bspline_ncoeffs(w));
+  return INT2FIX((int)RB_GSL_BSPLINE_NCOEFFS(w));
 }
 static VALUE rb_gsl_bspline_order(VALUE obj)
 {
@@ -98,7 +106,7 @@ static VALUE rb_gsl_bspline_eval(int argc, VALUE *argv, VALUE obj)
     break;
   case 1:
     x = NUM2DBL(argv[0]);
-    B = gsl_vector_alloc(w->nbreak+w->k-2);
+    B = gsl_vector_alloc(RB_GSL_BSPLINE_NCOEFFS(w));
     vB = Data_Wrap_Struct(cgsl_vector, 0, gsl_vector_free, B);
     break;
   default:

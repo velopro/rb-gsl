@@ -1094,7 +1094,7 @@ static VALUE rb_gsl_matrix_complex_imag(VALUE obj)
   return Data_Wrap_Struct(cgsl_matrix, 0, gsl_matrix_free, m);
 }
 
-static void gsl_matrix_complex_conjugate(gsl_matrix_complex *cm)
+static void matrix_complex_conjugate_in_place(gsl_matrix_complex *cm)
 {
   gsl_complex z;
   size_t i, j;
@@ -1106,7 +1106,7 @@ static void gsl_matrix_complex_conjugate(gsl_matrix_complex *cm)
   }
 }
 
-static void gsl_matrix_complex_conjugate2(gsl_matrix_complex *cmnew, gsl_matrix_complex *cm)
+static void matrix_complex_conjugate_into(gsl_matrix_complex *cmnew, gsl_matrix_complex *cm)
 {
   gsl_complex z;
   size_t i, j;
@@ -1122,7 +1122,7 @@ static VALUE rb_gsl_matrix_complex_conjugate(VALUE obj)
 {
   gsl_matrix_complex *cm = NULL;
   Data_Get_Struct(obj, gsl_matrix_complex, cm);
-  gsl_matrix_complex_conjugate(cm);
+  matrix_complex_conjugate_in_place(cm);
   return obj;
 }
 
@@ -1132,7 +1132,7 @@ static VALUE rb_gsl_matrix_complex_conjugate2(VALUE obj)
   Data_Get_Struct(obj, gsl_matrix_complex, cm);
   cmnew = gsl_matrix_complex_alloc(cm->size1, cm->size2);
   if (cmnew == NULL) rb_raise(rb_eNoMemError, "gsl_matrix_complex_alloc failed");
-  gsl_matrix_complex_conjugate2(cmnew, cm);
+  matrix_complex_conjugate_into(cmnew, cm);
   return Data_Wrap_Struct(cgsl_matrix_complex, 0, gsl_matrix_complex_free, cmnew);
 }
 
@@ -1140,7 +1140,7 @@ static VALUE rb_gsl_matrix_complex_dagger(VALUE obj)
 {
   gsl_matrix_complex *cm = NULL;
   Data_Get_Struct(obj, gsl_matrix_complex, cm);
-  gsl_matrix_complex_conjugate(cm);
+  matrix_complex_conjugate_in_place(cm);
   gsl_matrix_complex_transpose(cm);
   return obj;
 }
@@ -1151,7 +1151,7 @@ static VALUE rb_gsl_matrix_complex_dagger2(VALUE obj)
   Data_Get_Struct(obj, gsl_matrix_complex, cm);
   cmnew = gsl_matrix_complex_alloc(cm->size1, cm->size2);
   if (cmnew == NULL) rb_raise(rb_eNoMemError, "gsl_matrix_complex_alloc failed");
-  gsl_matrix_complex_conjugate2(cmnew, cm);
+  matrix_complex_conjugate_into(cmnew, cm);
   gsl_matrix_complex_transpose(cmnew);
   return Data_Wrap_Struct(cgsl_matrix_complex, 0, gsl_matrix_complex_free, cmnew);
 }
